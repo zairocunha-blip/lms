@@ -1,0 +1,309 @@
+// LMS Corporativo — Schema do banco de dados
+// PostgreSQL + Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identidade e organização
+// ---------------------------------------------------------------------------
+
+enum RoleCode {
+  ADMIN
+  EMPLOYEE
+}
+
+model Role {
+  id    String   @id @default(cuid())
+  code  RoleCode @unique
+  name  String
+  users User[]
+
+  @@map("roles")
+}
+
+model Department {
+  id    String @id @default(cuid())
+  name  String @unique
+  users User[]
+
+  @@map("departments")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String?
+  jobTitle     String?
+  avatarUrl    String?
+  status       UserStatus @default(PENDING)
+  hiredAt      DateTime?
+
+  roleId       String
+  role         Role        @relation(fields: [roleId], references: [id])
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  createdAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @updatedAt
+
+  coursesCreated    Course[]           @relation("CourseCreatedBy")
+  assignmentsGiven  CourseAssignment[] @relation("AssignedBy")
+  assignments       CourseAssignment[] @relation("AssignedTo")
+  lessonProgress    LessonProgress[]
+  courseProgress    CourseProgress[]
+  resetTokens       PasswordResetToken[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  @@index([status])
+  @@index([departmentId])
+  @@map("users")
+}
+
+enum TokenType {
+  INVITE
+  RESET
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  type      TokenType @default(RESET)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo de cursos
+// ---------------------------------------------------------------------------
+
+model Category {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  isActive Boolean  @default(true)
+  courses  Course[]
+
+  @@map("categories")
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  coverUrl    String?
+  status      CourseStatus @default(DRAFT)
+  order       Int          @default(0)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("CourseCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  modules     CourseModule[]
+  assignments CourseAssignment[]
+  progress    CourseProgress[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@map("courses")
+}
+
+model CourseModule {
+  id       String @id @default(cuid())
+  title    String
+  order    Int    @default(0)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  lessons Lesson[]
+
+  @@index([courseId])
+  @@map("course_modules")
+}
+
+model Lesson {
+  id    String @id @default(cuid())
+  title String
+  order Int    @default(0)
+
+  moduleId String
+  module   CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  content        LessonContent?
+  lessonProgress LessonProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([moduleId])
+  @@map("lessons")
+}
+
+enum LessonContentType {
+  MARKDOWN
+  SLIDES
+}
+
+model LessonContent {
+  id       String            @id @default(cuid())
+  type     LessonContentType @default(MARKDOWN)
+  body     String?           // conteúdo Markdown (sanitizado no servidor)
+  fileUrl  String?           // URL do PDF de apresentação, quando type = SLIDES
+  fileName String?
+
+  lessonId String @unique
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("lesson_contents")
+}
+
+// ---------------------------------------------------------------------------
+// Atribuições e progresso
+// ---------------------------------------------------------------------------
+
+enum AssignmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model CourseAssignment {
+  id     String            @id @default(cuid())
+  status AssignmentStatus  @default(NOT_STARTED)
+
+  userId String
+  user   User   @relation("AssignedTo", fields: [userId], references: [id], onDelete: Cascade)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  assignedById String
+  assignedBy   User   @relation("AssignedBy", fields: [assignedById], references: [id])
+
+  assignedAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  @@unique([userId, courseId])
+  @@index([status])
+  @@index([courseId])
+  @@map("course_assignments")
+}
+
+enum ProgressStatus {
+  STARTED
+  COMPLETED
+}
+
+model LessonProgress {
+  id     String         @id @default(cuid())
+  status ProgressStatus @default(STARTED)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@map("lesson_progress")
+}
+
+model CourseProgress {
+  id         String   @id @default(cuid())
+  percentage Int      @default(0)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  lastLessonId String?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+  @@map("course_progress")
+}
+
+// ---------------------------------------------------------------------------
+// Notificações e auditoria
+// ---------------------------------------------------------------------------
+
+enum NotificationType {
+  COURSE_ASSIGNED
+  COURSE_COMPLETED
+  CONTENT_ADDED
+}
+
+model Notification {
+  id      String            @id @default(cuid())
+  type    NotificationType
+  message String
+  isRead  Boolean           @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+
+  actorId String
+  actor   User   @relation(fields: [actorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@map("audit_logs")
+}
