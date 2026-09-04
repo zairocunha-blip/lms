@@ -15,7 +15,7 @@ const courseMap = {
 const userStatusMap = {
   ACTIVE: { label: "Ativo", tone: "success" as const },
   INACTIVE: { label: "Inativo", tone: "danger" as const },
-  PENDING: { label: "Convite pendente", tone: "warning" as const },
+  PENDING: { label: "Pendente", tone: "warning" as const },
 };
 
 export function AssignmentStatusBadge({ status }: { status: keyof typeof assignmentMap }) {

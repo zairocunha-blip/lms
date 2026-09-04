@@ -12,7 +12,10 @@ export function Sidebar({ userName }: { userName: string }) {
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-white">
           <GraduationCap className="h-4 w-4" aria-hidden="true" />
         </div>
-        <span className="font-display text-sm font-semibold text-ink">Treinamentos</span>
+        <div className="leading-tight">
+          <p className="font-display text-sm font-semibold text-ink">IDX DataCenters</p>
+          <p className="text-[11px] text-muted-subtle">Treinamentos</p>
+        </div>
       </div>
 
       <nav className="flex-1 space-y-0.5 px-3 py-4" aria-label="Navegação principal">

@@ -29,23 +29,30 @@ const sizeClasses: Record<ButtonSize, string> = {
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", loading, disabled, asChild, children, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
+    const classes = cn(
+      "inline-flex items-center justify-center rounded-md font-medium transition-colors",
+      "focus-visible:outline-none disabled:cursor-not-allowed",
+      variantClasses[variant],
+      sizeClasses[size],
+      className
+    );
+
+    // O Slot (usado quando asChild=true, ex.: <Button asChild><Link>...</Link></Button>)
+    // exige exatamente UM elemento filho — por isso não injetamos o ícone de
+    // carregamento como um irmão nesse caso, diferente do <button> normal.
+    if (asChild) {
+      return (
+        <Slot ref={ref} className={classes} {...props}>
+          {children}
+        </Slot>
+      );
+    }
+
     return (
-      <Comp
-        ref={ref}
-        disabled={disabled || loading}
-        className={cn(
-          "inline-flex items-center justify-center rounded-md font-medium transition-colors",
-          "focus-visible:outline-none disabled:cursor-not-allowed",
-          variantClasses[variant],
-          sizeClasses[size],
-          className
-        )}
-        {...props}
-      >
+      <button ref={ref} disabled={disabled || loading} className={classes} {...props}>
         {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
         {children}
-      </Comp>
+      </button>
     );
   }
 );

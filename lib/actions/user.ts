@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/permissions";
+import { DEFAULT_PASSWORD } from "@/lib/auth/default-password";
 import { createUserSchema, updateUserSchema } from "@/lib/validations/user";
 import * as userService from "@/lib/services/user";
 import type { ActionState } from "@/lib/actions/auth";
@@ -29,7 +30,7 @@ export async function createUserAction(_prevState: ActionState, formData: FormDa
   }
 
   revalidatePath("/admin/usuarios");
-  return { success: "Usuário criado. Um convite foi enviado para definição de senha." };
+  return { success: `Usuário criado com a senha padrão ${DEFAULT_PASSWORD}. Ele deverá trocá-la no primeiro acesso.` };
 }
 
 export async function updateUserAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
@@ -63,9 +64,11 @@ export async function setUserStatusAction(userId: string, status: "ACTIVE" | "IN
   revalidatePath(`/admin/usuarios/${userId}`);
 }
 
-export async function resendAccessAction(userId: string) {
+/** Devolve o usuário à senha padrão e retorna a senha para o administrador informar. */
+export async function resetPasswordAction(userId: string) {
   const admin = await requireAdmin();
-  const link = await userService.resendAccess(userId, admin.id);
+  const defaultPassword = await userService.resetPasswordToDefault(userId, admin.id);
+  revalidatePath("/admin/usuarios");
   revalidatePath(`/admin/usuarios/${userId}`);
-  return link;
+  return defaultPassword;
 }

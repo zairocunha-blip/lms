@@ -4,6 +4,7 @@ declare module "next-auth" {
   interface User {
     role?: "ADMIN" | "EMPLOYEE";
     status?: "ACTIVE" | "INACTIVE" | "PENDING";
+    mustChangePassword?: boolean;
   }
 
   interface Session {
@@ -11,6 +12,7 @@ declare module "next-auth" {
       id: string;
       role: "ADMIN" | "EMPLOYEE";
       status: "ACTIVE" | "INACTIVE" | "PENDING";
+      mustChangePassword: boolean;
     } & DefaultSession["user"];
   }
 }
@@ -20,5 +22,6 @@ declare module "next-auth/jwt" {
     id: string;
     role: "ADMIN" | "EMPLOYEE";
     status: "ACTIVE" | "INACTIVE" | "PENDING";
+    mustChangePassword: boolean;
   }
 }

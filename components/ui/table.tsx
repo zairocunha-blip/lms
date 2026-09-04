@@ -16,7 +16,7 @@ export function Thead({ className, ...props }: React.HTMLAttributes<HTMLTableSec
 export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
-      className={cn("py-2.5 px-4 text-xs font-medium uppercase tracking-wide text-muted first:pl-0 last:pr-0", className)}
+      className={cn("px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted first:pl-5 last:pr-5", className)}
       {...props}
     />
   );
@@ -27,7 +27,7 @@ export function Tbody({ className, ...props }: React.HTMLAttributes<HTMLTableSec
 }
 
 export function Td({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("py-3 px-4 align-middle text-ink-soft first:pl-0 last:pr-0", className)} {...props} />;
+  return <td className={cn("px-4 py-3 align-middle text-ink-soft first:pl-5 last:pr-5", className)} {...props} />;
 }
 
 export function Tr({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Eye, EyeOff, Check } from "lucide-react";
-import { setNewPasswordAction, type ActionState } from "@/lib/actions/auth";
+import { changePasswordAction, type ActionState } from "@/lib/actions/auth";
 import { Label, FieldError } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,14 +17,34 @@ const rules = [
   { test: (v: string) => /[0-9]/.test(v), label: "Um número" },
 ];
 
-export function SetPasswordForm({ token }: { token: string }) {
-  const [state, formAction, isPending] = useActionState(setNewPasswordAction, initialState);
+export function ChangePasswordForm({
+  submitLabel = "Salvar nova senha",
+  firstAccess = false,
+}: {
+  submitLabel?: string;
+  /** No primeiro acesso não pedimos a senha atual — ela acabou de ser usada no login. */
+  firstAccess?: boolean;
+}) {
+  const [state, formAction, isPending] = useActionState(changePasswordAction, initialState);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
 
   return (
     <form action={formAction} className="mt-6 space-y-4" noValidate>
-      <input type="hidden" name="token" value={token} />
+      {!firstAccess && (
+        <div>
+          <Label htmlFor="currentPassword">Senha atual</Label>
+          <Input
+            id="currentPassword"
+            name="currentPassword"
+            type="password"
+            autoComplete="current-password"
+            aria-invalid={!!state.fieldErrors?.currentPassword}
+            required
+          />
+          <FieldError>{state.fieldErrors?.currentPassword?.[0]}</FieldError>
+        </div>
+      )}
 
       <div>
         <Label htmlFor="password">Nova senha</Label>
@@ -83,7 +103,7 @@ export function SetPasswordForm({ token }: { token: string }) {
       )}
 
       <Button type="submit" className="w-full" loading={isPending}>
-        Definir senha e continuar
+        {submitLabel}
       </Button>
     </form>
   );

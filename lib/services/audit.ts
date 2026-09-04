@@ -1,12 +1,13 @@
 import "server-only";
 import { prisma } from "@/lib/db/prisma";
+import type { Prisma } from "@prisma/client";
 
 interface LogActionInput {
   actorId: string;
   action: string;
   entityType: string;
   entityId?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
 }
 
 /** Registra uma ação administrativa relevante para fins de auditoria. */

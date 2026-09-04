@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { getEmployeeDashboardStats } from "@/lib/services/stats";
@@ -6,7 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { formatDate } from "@/lib/utils/format";
-import { PlayCircle, CheckCircle2, TrendingUp } from "lucide-react";
+import { PlayCircle, CheckCircle2, TrendingUp, KeyRound } from "lucide-react";
 import { ProfileForm } from "./profile-form";
 
 export const metadata: Metadata = { title: "Perfil" };
@@ -57,6 +58,22 @@ export default async function ProfilePage() {
             <CardContent>
               <p className="font-display text-sm font-semibold text-ink">Editar informações</p>
               <ProfileForm name={user.name} avatarUrl={user.avatarUrl} />
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardContent>
+              <p className="font-display text-sm font-semibold text-ink">Segurança</p>
+              <p className="mt-1 text-sm text-muted">
+                Troque sua senha quando quiser. Após a troca, você entra novamente com a nova senha.
+              </p>
+              <Link
+                href="/trocar-senha"
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              >
+                <KeyRound className="h-4 w-4" aria-hidden="true" />
+                Trocar minha senha
+              </Link>
             </CardContent>
           </Card>
         </div>

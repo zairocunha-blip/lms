@@ -4,16 +4,16 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Treinamentos",
-    template: "%s · Treinamentos",
+    default: "IDX DataCenters · Treinamentos",
+    template: "%s · IDX DataCenters",
   },
-  description: "Plataforma interna de cursos corporativos.",
+  description: "Portal de treinamentos corporativos da IDX DataCenters.",
   robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body>
         <ToastProvider>{children}</ToastProvider>
       </body>

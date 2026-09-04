@@ -100,7 +100,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
             <option value="">Todos</option>
             <option value="ACTIVE">Ativo</option>
             <option value="INACTIVE">Inativo</option>
-            <option value="PENDING">Convite pendente</option>
+            <option value="PENDING">Pendente</option>
           </Select>
         </div>
 

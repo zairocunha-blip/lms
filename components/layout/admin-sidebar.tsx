@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  Building2,
   BookOpen,
   Tag,
   LineChart,
   LogOut,
   GraduationCap,
-  ArrowLeftRight,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -19,6 +20,7 @@ import { signOutAction } from "@/lib/actions/auth";
 const links: { href: string; icon: LucideIcon; label: string; exact?: boolean }[] = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { href: "/admin/usuarios", icon: Users, label: "Usuários" },
+  { href: "/admin/departamentos", icon: Building2, label: "Departamentos" },
   { href: "/admin/cursos", icon: BookOpen, label: "Cursos" },
   { href: "/admin/categorias", icon: Tag, label: "Categorias" },
   { href: "/admin/progresso", icon: LineChart, label: "Progresso" },
@@ -34,7 +36,7 @@ export function AdminSidebar({ userName }: { userName: string }) {
           <GraduationCap className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="leading-tight">
-          <p className="font-display text-sm font-semibold text-white">Treinamentos</p>
+          <p className="font-display text-sm font-semibold text-white">IDX DataCenters</p>
           <p className="text-[11px] text-white/50">Administração</p>
         </div>
       </div>
@@ -61,11 +63,11 @@ export function AdminSidebar({ userName }: { userName: string }) {
 
       <div className="space-y-0.5 border-t border-white/10 p-3">
         <Link
-          href="/home"
+          href="/admin/perfil"
           className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
         >
-          <ArrowLeftRight className="h-[18px] w-[18px]" aria-hidden="true" />
-          Área do colaborador
+          <UserCog className="h-[18px] w-[18px]" aria-hidden="true" />
+          Meu perfil
         </Link>
         <form action={signOutAction}>
           <button

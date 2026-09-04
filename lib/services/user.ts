@@ -1,22 +1,20 @@
 import "server-only";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
-import { createPasswordToken } from "@/lib/auth/tokens";
-import { inviteEmailTemplate, resetEmailTemplate, sendMail } from "@/lib/email/mailer";
+import { DEFAULT_PASSWORD } from "@/lib/auth/default-password";
 import { logAction } from "@/lib/services/audit";
 import type { CreateUserInput, UpdateUserInput } from "@/lib/validations/user";
 import type { Prisma } from "@prisma/client";
 
-const APP_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-
-async function sendInvite(userId: string, name: string, email: string) {
-  const token = await createPasswordToken(userId, "INVITE");
-  const link = `${APP_URL}/convite/${token}`;
-  const { subject, html } = inviteEmailTemplate({ name, link });
-  await sendMail({ to: email, subject, html });
-  return link;
+function hashDefaultPassword() {
+  return bcrypt.hash(DEFAULT_PASSWORD, 12);
 }
 
-/** Cria um colaborador/administrador e dispara o convite de definição de senha. */
+/**
+ * Cria um colaborador/administrador já com a senha padrão definida. O
+ * administrador informa a senha ao usuário por fora do sistema; o primeiro
+ * login obriga a troca (`mustChangePassword`).
+ */
 export async function createUser(input: CreateUserInput, actorId: string) {
   const role = await prisma.role.findUniqueOrThrow({ where: { code: input.roleCode } });
 
@@ -28,14 +26,15 @@ export async function createUser(input: CreateUserInput, actorId: string) {
       departmentId: input.departmentId || null,
       hiredAt: input.hiredAt ? new Date(input.hiredAt) : null,
       roleId: role.id,
-      status: "PENDING",
+      status: "ACTIVE",
+      passwordHash: await hashDefaultPassword(),
+      mustChangePassword: true,
     },
   });
 
   await logAction({ actorId, action: "USER_CREATED", entityType: "User", entityId: user.id });
 
-  const inviteLink = await sendInvite(user.id, user.name, user.email);
-  return { user, inviteLink };
+  return { user, defaultPassword: DEFAULT_PASSWORD };
 }
 
 export async function updateUser(input: UpdateUserInput, actorId: string) {
@@ -70,21 +69,19 @@ export async function setUserStatus(userId: string, status: "ACTIVE" | "INACTIVE
   return user;
 }
 
-/** Gera um novo convite/token de redefinição para o usuário. */
-export async function resendAccess(userId: string, actorId: string) {
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-  const type = user.passwordHash ? "RESET" : "INVITE";
-  const token = await createPasswordToken(userId, type);
-  const link = `${APP_URL}/${type === "INVITE" ? "convite" : "redefinir-senha"}/${token}`;
+/**
+ * Devolve o usuário à senha padrão — é o caminho para quem esqueceu a senha:
+ * o colaborador pede ao administrador, que redefine aqui e informa a senha
+ * padrão. A troca volta a ser obrigatória no próximo acesso.
+ */
+export async function resetPasswordToDefault(userId: string, actorId: string) {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashDefaultPassword(), mustChangePassword: true },
+  });
 
-  const template =
-    type === "INVITE"
-      ? inviteEmailTemplate({ name: user.name, link })
-      : resetEmailTemplate({ name: user.name, link });
-  await sendMail({ to: user.email, ...template });
-
-  await logAction({ actorId, action: "USER_ACCESS_RESET", entityType: "User", entityId: userId });
-  return link;
+  await logAction({ actorId, action: "USER_PASSWORD_RESET", entityType: "User", entityId: userId });
+  return DEFAULT_PASSWORD;
 }
 
 interface ListUsersParams {

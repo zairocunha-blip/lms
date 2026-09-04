@@ -92,7 +92,7 @@ export function Header({
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/perfil" className="flex items-center gap-2">
+              <Link href={isAdmin ? "/admin/perfil" : "/perfil"} className="flex items-center gap-2">
                 <UserIcon className="h-4 w-4" aria-hidden="true" />
                 Meu perfil
               </Link>

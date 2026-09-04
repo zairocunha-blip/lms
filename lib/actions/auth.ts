@@ -1,13 +1,11 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import bcrypt from "bcryptjs";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
-import { loginSchema, forgotPasswordSchema, setPasswordSchema } from "@/lib/validations/auth";
-import { createPasswordToken, verifyPasswordToken, consumePasswordToken } from "@/lib/auth/tokens";
-import { resetEmailTemplate, sendMail } from "@/lib/email/mailer";
+import { requireUser } from "@/lib/auth/permissions";
+import { loginSchema, changePasswordSchema, firstAccessPasswordSchema } from "@/lib/validations/auth";
 
 export interface ActionState {
   error?: string;
@@ -29,7 +27,7 @@ export async function loginAction(_prevState: ActionState, formData: FormData): 
     await signIn("credentials", {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirectTo: "/home",
+      redirectTo: "/",
     });
     return {};
   } catch (error) {
@@ -46,63 +44,74 @@ export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
 }
 
-export async function requestPasswordResetAction(
+/**
+ * Troca a senha do usuário autenticado. Cobre dois casos:
+ *
+ * - Primeiro acesso (`mustChangePassword`): o usuário acabou de autenticar com
+ *   a senha padrão no login, então pedimos apenas a nova senha + confirmação.
+ * - Troca voluntária: o usuário já tem senha própria e precisa confirmar a
+ *   senha atual (uma sessão aberta herdada não basta para trocá-la).
+ *
+ * O modo é decidido pela flag no banco, nunca por um campo do formulário.
+ */
+export async function changePasswordAction(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
-  if (!parsed.success) {
-    return { error: "Informe um e-mail válido.", fieldErrors: parsed.error.flatten().fieldErrors };
+  const sessionUser = await requireUser();
+
+  const user = await prisma.user.findUnique({ where: { id: sessionUser.id } });
+  if (!user?.passwordHash) return { error: "Não foi possível validar sua conta. Faça login novamente." };
+
+  let newPassword: string;
+
+  if (user.mustChangePassword) {
+    const parsed = firstAccessPasswordSchema.safeParse({
+      password: formData.get("password"),
+      confirmPassword: formData.get("confirmPassword"),
+    });
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      return {
+        error: fieldErrors.password?.[0] ?? fieldErrors.confirmPassword?.[0] ?? "Verifique os campos e tente novamente.",
+        fieldErrors,
+      };
+    }
+    newPassword = parsed.data.password;
+  } else {
+    const parsed = changePasswordSchema.safeParse({
+      currentPassword: formData.get("currentPassword"),
+      password: formData.get("password"),
+      confirmPassword: formData.get("confirmPassword"),
+    });
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      return {
+        error:
+          fieldErrors.currentPassword?.[0] ??
+          fieldErrors.password?.[0] ??
+          fieldErrors.confirmPassword?.[0] ??
+          "Verifique os campos e tente novamente.",
+        fieldErrors,
+      };
+    }
+
+    const currentMatches = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+    if (!currentMatches) {
+      return { error: "Senha atual incorreta.", fieldErrors: { currentPassword: ["Senha atual incorreta."] } };
+    }
+    newPassword = parsed.data.password;
   }
 
-  const genericSuccess: ActionState = {
-    success: "Se este e-mail estiver cadastrado, enviaremos um link de redefinição em instantes.",
-  };
-
-  const user = await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
-  // Mesma resposta independentemente do usuário existir — impede que a tela
-  // seja usada para descobrir quais e-mails estão cadastrados na empresa.
-  if (!user || user.status !== "ACTIVE") return genericSuccess;
-
-  const token = await createPasswordToken(user.id, "RESET");
-  const link = `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/redefinir-senha/${token}`;
-  const { subject, html } = resetEmailTemplate({ name: user.name, link });
-  await sendMail({ to: user.email, subject, html });
-
-  return genericSuccess;
-}
-
-export async function setNewPasswordAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = setPasswordSchema.safeParse({
-    token: formData.get("token"),
-    password: formData.get("password"),
-    confirmPassword: formData.get("confirmPassword"),
-  });
-
-  if (!parsed.success) {
-    return {
-      error: parsed.error.flatten().fieldErrors.password?.[0] ?? "Verifique os campos e tente novamente.",
-      fieldErrors: parsed.error.flatten().fieldErrors,
-    };
-  }
-
-  const result = await verifyPasswordToken(parsed.data.token);
-  if (!result.valid) {
-    const messages = {
-      not_found: "Link inválido.",
-      used: "Este link já foi utilizado.",
-      expired: "Este link expirou. Solicite um novo.",
-    } as const;
-    return { error: messages[result.reason] };
-  }
-
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-
+  const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({
-    where: { id: result.token.userId },
-    data: { passwordHash, status: "ACTIVE" },
+    where: { id: user.id },
+    data: { passwordHash, mustChangePassword: false, status: "ACTIVE" },
   });
-  await consumePasswordToken(result.token.id);
 
-  redirect("/login?senha-definida=1");
+  // A flag `mustChangePassword` vive dentro do JWT já emitido; encerrar a
+  // sessão é a forma mais simples de garantir que o próximo acesso use um
+  // token atualizado, sem depender de revalidação de sessão.
+  await signOut({ redirectTo: "/login?senha-alterada=1" });
+  return {};
 }

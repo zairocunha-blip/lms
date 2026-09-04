@@ -24,6 +24,7 @@ async function main() {
     departmentNames.map((name) => prisma.department.upsert({ where: { name }, update: {}, create: { name } }))
   );
   const [techDept, hrDept, supportDept] = departments;
+  if (!techDept || !hrDept || !supportDept) throw new Error("Falha ao criar departamentos.");
 
   // --- Categorias -----------------------------------------------------------------
   const categoryNames = ["Integração", "Segurança", "Tecnologia", "Atendimento", "Processos", "Compliance"];
@@ -31,6 +32,7 @@ async function main() {
     categoryNames.map((name) => prisma.category.upsert({ where: { name }, update: {}, create: { name } }))
   );
   const [integrationCat, securityCat, , supportCat] = categories;
+  if (!integrationCat || !securityCat || !supportCat) throw new Error("Falha ao criar categorias.");
 
   // --- Usuários -----------------------------------------------------------------
   const adminPassword = await bcrypt.hash("Admin@123", 12);
@@ -43,6 +45,9 @@ async function main() {
       passwordHash: adminPassword,
       roleId: adminRole.id,
       status: "ACTIVE",
+      // Contas de demonstração já entram com senha própria — não passam pela
+      // troca obrigatória do primeiro acesso.
+      mustChangePassword: false,
       jobTitle: "Administrador da plataforma",
     },
   });
@@ -66,6 +71,7 @@ async function main() {
           passwordHash: employeePassword,
           roleId: employeeRole.id,
           status: "ACTIVE",
+          mustChangePassword: false,
           hiredAt: new Date("2025-02-01"),
         },
       })

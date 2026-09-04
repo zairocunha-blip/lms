@@ -30,14 +30,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           include: { role: true },
         });
 
-        // Usuário inexistente, sem senha definida (convite pendente) ou
-        // inativo nunca autentica — mensagem genérica evita enumeração de contas.
+        // Usuário inexistente, sem senha definida ou inativo nunca autentica —
+        // mensagem genérica evita enumeração de contas.
         if (!user || !user.passwordHash) return null;
         if (user.status !== "ACTIVE") return null;
 
         const passwordMatches = await bcrypt.compare(password, user.passwordHash);
         if (!passwordMatches) return null;
 
+        // Quem ainda está com a senha padrão autentica normalmente, mas o
+        // middleware o mantém preso em /trocar-senha até definir uma própria.
         return {
           id: user.id,
           name: user.name,
@@ -45,6 +47,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           image: user.avatarUrl,
           role: user.role.code,
           status: user.status,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),

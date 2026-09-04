@@ -16,8 +16,9 @@ export const updateUserSchema = createUserSchema.extend({
 });
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
+// A foto de perfil é enviada como arquivo e tratada fora do Zod (ver
+// `updateOwnProfileAction`); aqui validamos apenas os campos de texto.
 export const updateOwnProfileSchema = z.object({
   name: z.string().min(2, "Informe o nome completo."),
-  avatarUrl: z.string().url().optional().or(z.literal("")),
 });
 export type UpdateOwnProfileInput = z.infer<typeof updateOwnProfileSchema>;

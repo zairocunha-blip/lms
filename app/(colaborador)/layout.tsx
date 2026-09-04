@@ -9,6 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function CollaboratorLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  // Regra — o administrador tem sua própria área (`/admin/*`) e não acessa as
+  // telas do colaborador. O middleware já bloqueia por rota; esta é a segunda
+  // camada de defesa (nunca confiar apenas na proteção de rota).
+  if (session.user.role === "ADMIN") redirect("/admin/dashboard");
 
   const [notifications, unreadCount] = await Promise.all([
     listNotifications(session.user.id, 8),
@@ -23,7 +27,6 @@ export default async function CollaboratorLayout({ children }: { children: React
           userName={session.user.name ?? ""}
           userEmail={session.user.email ?? ""}
           avatarUrl={session.user.image}
-          isAdmin={session.user.role === "ADMIN"}
           notifications={notifications}
           unreadCount={unreadCount}
         />

@@ -52,45 +52,29 @@ model User {
   status       UserStatus @default(PENDING)
   hiredAt      DateTime?
 
+  // Quando true, o usuário só consegue navegar para /trocar-senha até definir
+  // uma senha própria — é o que força a troca da senha padrão no 1º acesso.
+  mustChangePassword Boolean @default(false)
+
   roleId       String
   role         Role        @relation(fields: [roleId], references: [id])
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
 
-  createdAt DateTime @updatedAt @default(now())
+  createdAt DateTime @default(now()) @updatedAt
   updatedAt DateTime @updatedAt
 
-  coursesCreated    Course[]           @relation("CourseCreatedBy")
-  assignmentsGiven  CourseAssignment[] @relation("AssignedBy")
-  assignments       CourseAssignment[] @relation("AssignedTo")
-  lessonProgress    LessonProgress[]
-  courseProgress    CourseProgress[]
-  resetTokens       PasswordResetToken[]
-  notifications     Notification[]
-  auditLogs         AuditLog[]
+  coursesCreated   Course[]           @relation("CourseCreatedBy")
+  assignmentsGiven CourseAssignment[] @relation("AssignedBy")
+  assignments      CourseAssignment[] @relation("AssignedTo")
+  lessonProgress   LessonProgress[]
+  courseProgress   CourseProgress[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
 
   @@index([status])
   @@index([departmentId])
   @@map("users")
-}
-
-enum TokenType {
-  INVITE
-  RESET
-}
-
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  type      TokenType @default(RESET)
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  @@index([userId])
-  @@map("password_reset_tokens")
 }
 
 // ---------------------------------------------------------------------------
@@ -139,9 +123,9 @@ model Course {
 }
 
 model CourseModule {
-  id       String @id @default(cuid())
-  title    String
-  order    Int    @default(0)
+  id    String @id @default(cuid())
+  title String
+  order Int    @default(0)
 
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -178,8 +162,8 @@ enum LessonContentType {
 model LessonContent {
   id       String            @id @default(cuid())
   type     LessonContentType @default(MARKDOWN)
-  body     String?           // conteúdo Markdown (sanitizado no servidor)
-  fileUrl  String?           // URL do PDF de apresentação, quando type = SLIDES
+  body     String? // conteúdo Markdown (sanitizado no servidor)
+  fileUrl  String? // URL do PDF de apresentação, quando type = SLIDES
   fileName String?
 
   lessonId String @unique
@@ -201,8 +185,8 @@ enum AssignmentStatus {
 }
 
 model CourseAssignment {
-  id     String            @id @default(cuid())
-  status AssignmentStatus  @default(NOT_STARTED)
+  id     String           @id @default(cuid())
+  status AssignmentStatus @default(NOT_STARTED)
 
   userId String
   user   User   @relation("AssignedTo", fields: [userId], references: [id], onDelete: Cascade)
@@ -246,8 +230,8 @@ model LessonProgress {
 }
 
 model CourseProgress {
-  id         String   @id @default(cuid())
-  percentage Int      @default(0)
+  id         String @id @default(cuid())
+  percentage Int    @default(0)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -277,10 +261,10 @@ enum NotificationType {
 }
 
 model Notification {
-  id      String            @id @default(cuid())
+  id      String           @id @default(cuid())
   type    NotificationType
   message String
-  isRead  Boolean           @default(false)
+  isRead  Boolean          @default(false)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -292,7 +276,7 @@ model Notification {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   action     String
   entityType String
   entityId   String?

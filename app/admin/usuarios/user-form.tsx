@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserAction, updateUserAction } from "@/lib/actions/user";
 import type { ActionState } from "@/lib/actions/auth";
@@ -55,7 +56,12 @@ export function UserForm({ departments, user }: { departments: Department[]; use
           <Input id="jobTitle" name="jobTitle" defaultValue={user?.jobTitle ?? ""} />
         </div>
         <div>
-          <Label htmlFor="departmentId">Departamento</Label>
+          <div className="flex items-baseline justify-between">
+            <Label htmlFor="departmentId">Departamento</Label>
+            <Link href="/admin/departamentos" className="text-xs font-medium text-primary hover:underline">
+              Gerenciar
+            </Link>
+          </div>
           <Select id="departmentId" name="departmentId" defaultValue={user?.departmentId ?? ""}>
             <option value="">Sem departamento</option>
             {departments.map((d) => (
@@ -87,7 +93,7 @@ export function UserForm({ departments, user }: { departments: Department[]; use
           <Select id="status" name="status" defaultValue={user.status}>
             <option value="ACTIVE">Ativo</option>
             <option value="INACTIVE">Inativo</option>
-            <option value="PENDING">Convite pendente</option>
+            <option value="PENDING">Pendente</option>
           </Select>
         </div>
       )}

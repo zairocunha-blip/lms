@@ -11,7 +11,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { setUserStatusAction, resendAccessAction } from "@/lib/actions/user";
+import { DEFAULT_PASSWORD } from "@/lib/auth/default-password";
+import { setUserStatusAction, resetPasswordAction } from "@/lib/actions/user";
 import { useToast } from "@/components/ui/toast";
 
 export function UserRowActions({ userId, status }: { userId: string; status: "ACTIVE" | "INACTIVE" | "PENDING" }) {
@@ -32,10 +33,17 @@ export function UserRowActions({ userId, status }: { userId: string; status: "AC
     });
   }
 
-  function handleResendAccess() {
+  const [resetOpen, setResetOpen] = useState(false);
+
+  function handleResetPassword() {
     startTransition(async () => {
-      await resendAccessAction(userId);
-      showToast({ variant: "success", title: "Link de acesso reenviado" });
+      const defaultPassword = await resetPasswordAction(userId);
+      setResetOpen(false);
+      showToast({
+        variant: "success",
+        title: "Senha redefinida",
+        description: `Informe ao usuário a senha padrão ${defaultPassword}. Ele deverá trocá-la no próximo acesso.`,
+      });
     });
   }
 
@@ -57,9 +65,9 @@ export function UserRowActions({ userId, status }: { userId: string; status: "AC
               Visualizar / editar
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleResendAccess} disabled={isPending}>
+          <DropdownMenuItem onClick={() => setResetOpen(true)} disabled={isPending}>
             <KeyRound className="h-4 w-4" aria-hidden="true" />
-            {status === "PENDING" ? "Reenviar convite" : "Redefinir acesso"}
+            Redefinir para senha padrão
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem destructive={isActive} onClick={() => setConfirmOpen(true)}>
@@ -68,6 +76,16 @@ export function UserRowActions({ userId, status }: { userId: string; status: "AC
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <ConfirmDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        title="Redefinir para senha padrão"
+        description={`A senha atual do usuário será substituída pela senha padrão ${DEFAULT_PASSWORD}, que ele deverá trocar no próximo acesso. Informe a nova senha a ele por um canal seguro.`}
+        confirmLabel="Redefinir senha"
+        loading={isPending}
+        onConfirm={handleResetPassword}
+      />
 
       <ConfirmDialog
         open={confirmOpen}

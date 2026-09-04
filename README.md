@@ -35,7 +35,7 @@ na conversa de planejamento deste projeto.
 
 ```
 app/
-├── (auth)/              # login, esqueci-senha, redefinir-senha, convite
+├── (auth)/              # login, trocar-senha
 ├── (colaborador)/        # home, cursos, aula, perfil, histórico
 ├── admin/                # dashboard, usuários, cursos, categorias, progresso
 └── api/                  # rota do NextAuth + upload de arquivos
@@ -48,12 +48,11 @@ components/
 └── auth/
 
 lib/
-├── auth/                 # permissões (requireUser/requireAdmin), tokens
+├── auth/                 # permissões (requireUser/requireAdmin), senha padrão
 ├── actions/               # Server Actions (única porta de entrada de escrita)
 ├── services/               # regras de negócio (fonte única da verdade)
 ├── validations/            # schemas Zod
-├── db/                    # cliente Prisma
-└── email/                 # abstração de envio de e-mail
+└── db/                    # cliente Prisma
 
 prisma/
 ├── schema.prisma
@@ -140,7 +139,7 @@ qualquer host que rode Node.js e permita conectar a um Postgres funciona.
 ### Vercel (recomendado para o front-end/Next.js)
 1. Importe o repositório na Vercel.
 2. Configure as variáveis de ambiente (`DATABASE_URL`, `NEXTAUTH_URL`,
-   `NEXTAUTH_SECRET` e, se for usar e-mail transacional, as variáveis `SMTP_*`).
+   `NEXTAUTH_SECRET`).
 3. Configure o **Build Command** como `npm run build` (já roda `prisma generate`).
 4. Rode as migrations contra o banco de produção uma vez, a partir da sua
    máquina ou de um passo de CI: `npx prisma migrate deploy`.
@@ -180,11 +179,16 @@ com um Dockerfile padrão de Next.js (`next build` + `next start`).
 - Autorização em **três camadas**: middleware (rota) → `requireUser`/`requireAdmin`
   em toda Server Action e Route Handler → filtro por `userId` nas queries.
   O front-end nunca é a única barreira.
-- Tokens de convite/redefinição de senha: opacos, hash SHA-256 armazenado
-  (nunca o valor em texto puro), uso único, com expiração (1h para redefinição,
-  7 dias para convite).
-- Resposta genérica em "esqueci minha senha" — não revela se um e-mail existe
-  na base.
+- Primeiro acesso com **senha padrão** (`Idx@2026`, em `lib/auth/default-password.ts`)
+  e troca obrigatória: enquanto `User.mustChangePassword` for `true`, o middleware
+  redireciona qualquer rota para `/trocar-senha`. A nova senha não pode ser igual
+  à padrão nem à anterior, e a sessão é encerrada após a troca para que o JWT
+  seja reemitido sem a flag.
+- A troca de senha exige a senha atual, inclusive no primeiro acesso — uma
+  sessão herdada não basta para assumir a conta.
+- Não há recuperação de senha por e-mail: quem esquece a senha pede ao
+  administrador, que redefine a conta para a senha padrão (ação registrada em
+  auditoria como `USER_PASSWORD_RESET`).
 - Markdown das aulas sanitizado no servidor (`rehype-sanitize`) antes de
   renderizar — mitiga XSS mesmo que o conteúdo cole HTML malicioso.
 - Toda escrita no banco passa por Zod no limite da Server Action — nunca
@@ -215,9 +219,9 @@ previstas, sem implementá-las prematuramente:
   alterar o fluxo de progresso existente.
 - **Prazo para conclusão / cursos obrigatórios**: campos adicionais em
   `Course`/`CourseAssignment`.
-- **Notificações por e-mail**: `lib/email/mailer.ts` já isola o provedor —
-  troque a implementação interna por SMTP/Resend/SES sem tocar no restante
-  do código.
+- **Notificações por e-mail**: hoje as notificações são apenas in-app
+  (`Notification`); basta introduzir um adaptador de envio e consumi-lo nos
+  services, sem tocar no restante do código.
 - **SSO / Microsoft Entra ID / LDAP**: Auth.js suporta providers OAuth/SAML
   nativamente; adicionar um novo provider em `auth.ts` não exige reescrever
   o restante da autenticação.
