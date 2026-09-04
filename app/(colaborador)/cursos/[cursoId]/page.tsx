@@ -70,7 +70,7 @@ export default async function CourseOverviewPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      <div className="mx-auto mt-8 max-w-[720px] space-y-3">
+      <div className="mt-8 space-y-3">
         {course.modules.map((module, moduleIndex) => (
           <div key={module.id} className="rounded-md border border-border bg-canvas">
             <div className="border-b border-border px-4 py-3">
