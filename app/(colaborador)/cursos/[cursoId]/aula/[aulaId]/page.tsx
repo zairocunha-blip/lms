@@ -46,7 +46,10 @@ export default async function LessonPage({
   const isLessonCompleted = completedLessonIds.has(aulaId);
 
   return (
-    <div>
+    // Sem max-w-content de propósito: ao contrário das outras telas do
+    // colaborador, a aula usa a largura inteira disponível — módulos fixos à
+    // esquerda, conteúdo ocupando todo o restante, sem sobra em branco.
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <Link href={`/cursos/${cursoId}`} className="mb-4 flex items-center gap-1 text-sm font-medium text-muted hover:text-ink lg:hidden">
         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         Voltar ao curso

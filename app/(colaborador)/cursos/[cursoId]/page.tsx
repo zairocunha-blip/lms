@@ -38,7 +38,7 @@ export default async function CourseOverviewPage({ params }: { params: Promise<{
   const nextLesson = allLessons.find((l) => !completedLessonIds.has(l.id)) ?? allLessons[0];
 
   return (
-    <div>
+    <div className="mx-auto max-w-content px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-col gap-6 md:flex-row">
         <div className="flex h-40 w-full shrink-0 items-center justify-center overflow-hidden rounded-md bg-primary-soft text-primary md:h-auto md:w-64">
           {course.coverUrl ? (

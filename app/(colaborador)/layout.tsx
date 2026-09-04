@@ -30,9 +30,13 @@ export default async function CollaboratorLayout({ children }: { children: React
           notifications={notifications}
           unreadCount={unreadCount}
         />
-        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
-          <div className="mx-auto max-w-content px-4 py-6 md:px-8 md:py-8">{children}</div>
-        </main>
+        {/*
+         * Sem max-width fixo aqui: cada página define seu próprio contêiner
+         * (a maioria usa `mx-auto max-w-content`, igual ao admin) para poder
+         * abrir mão dele quando precisar — é o caso da visualização de aula,
+         * que usa a tela inteira em vez de ficar presa a 1152px.
+         */}
+        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>
       </div>
       <MobileNav />
     </div>

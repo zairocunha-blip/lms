@@ -21,7 +21,7 @@ export default async function HomePage() {
   const inProgressCourses = myCourses.filter((c) => c.assignment.status === "IN_PROGRESS");
 
   return (
-    <div>
+    <div className="mx-auto max-w-content px-4 py-6 md:px-8 md:py-8">
       <div>
         <h1 className="font-display text-2xl font-semibold text-ink">Olá, {firstName}!</h1>
         <p className="mt-1 text-muted">Continue seu aprendizado de onde parou.</p>

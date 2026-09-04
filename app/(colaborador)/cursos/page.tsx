@@ -31,7 +31,7 @@ export default async function MyCoursesPage({
     activeFilter === "all" ? myCourses : myCourses.filter((c) => c.assignment.status === activeFilter);
 
   return (
-    <div>
+    <div className="mx-auto max-w-content px-4 py-6 md:px-8 md:py-8">
       <h1 className="font-display text-2xl font-semibold text-ink">Meus cursos</h1>
       <p className="mt-1 text-muted">Treinamentos atribuídos a você.</p>
 
