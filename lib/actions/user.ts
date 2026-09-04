@@ -72,3 +72,14 @@ export async function resetPasswordAction(userId: string) {
   revalidatePath(`/admin/usuarios/${userId}`);
   return defaultPassword;
 }
+
+export async function deleteUserAction(userId: string): Promise<{ error?: string }> {
+  const admin = await requireAdmin();
+  try {
+    await userService.deleteUser(userId, admin.id);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Não foi possível excluir o usuário." };
+  }
+  revalidatePath("/admin/usuarios");
+  return {};
+}

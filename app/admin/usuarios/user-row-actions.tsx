@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { MoreHorizontal, Eye, KeyRound, UserX, UserCheck } from "lucide-react";
+import { MoreHorizontal, Eye, KeyRound, UserX, UserCheck, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -12,11 +12,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DEFAULT_PASSWORD } from "@/lib/auth/default-password";
-import { setUserStatusAction, resetPasswordAction } from "@/lib/actions/user";
+import { setUserStatusAction, resetPasswordAction, deleteUserAction } from "@/lib/actions/user";
 import { useToast } from "@/components/ui/toast";
 
 export function UserRowActions({ userId, status }: { userId: string; status: "ACTIVE" | "INACTIVE" | "PENDING" }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { showToast } = useToast();
 
@@ -33,8 +35,6 @@ export function UserRowActions({ userId, status }: { userId: string; status: "AC
     });
   }
 
-  const [resetOpen, setResetOpen] = useState(false);
-
   function handleResetPassword() {
     startTransition(async () => {
       const defaultPassword = await resetPasswordAction(userId);
@@ -44,6 +44,18 @@ export function UserRowActions({ userId, status }: { userId: string; status: "AC
         title: "Senha redefinida",
         description: `Informe ao usuário a senha padrão ${defaultPassword}. Ele deverá trocá-la no próximo acesso.`,
       });
+    });
+  }
+
+  function handleDelete() {
+    startTransition(async () => {
+      const result = await deleteUserAction(userId);
+      setDeleteOpen(false);
+      if (result.error) {
+        showToast({ variant: "error", title: "Não foi possível excluir", description: result.error });
+      } else {
+        showToast({ variant: "success", title: "Usuário excluído" });
+      }
     });
   }
 
@@ -74,6 +86,10 @@ export function UserRowActions({ userId, status }: { userId: string; status: "AC
             {isActive ? <UserX className="h-4 w-4" aria-hidden="true" /> : <UserCheck className="h-4 w-4" aria-hidden="true" />}
             {isActive ? "Desativar usuário" : "Ativar usuário"}
           </DropdownMenuItem>
+          <DropdownMenuItem destructive onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            Excluir usuário
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -100,6 +116,17 @@ export function UserRowActions({ userId, status }: { userId: string; status: "AC
         destructive={isActive}
         loading={isPending}
         onConfirm={handleToggleStatus}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Excluir usuário"
+        description="Esta ação não pode ser desfeita. As atribuições de curso, o progresso e as notificações deste usuário serão removidos permanentemente. Se preferir manter o histórico, desative o usuário em vez de excluir."
+        confirmLabel="Excluir"
+        destructive
+        loading={isPending}
+        onConfirm={handleDelete}
       />
     </>
   );

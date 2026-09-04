@@ -3,11 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import { getCourseForEditing, listCategories } from "@/lib/services/course";
+import { listCourseAssignments } from "@/lib/services/assignment";
 import { prisma } from "@/lib/db/prisma";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CourseInfoForm } from "@/components/admin/course-info-form";
 import { CourseBuilder } from "@/components/admin/course-builder";
 import { AssignCourseForm } from "@/components/admin/assign-course-form";
+import { CourseAssigneesList } from "@/components/admin/course-assignees-list";
 import { CourseStatusBadge } from "@/components/ui/status-badge";
 
 export const metadata: Metadata = { title: "Editar curso" };
@@ -16,12 +18,12 @@ export const dynamic = "force-dynamic";
 export default async function EditCoursePage({ params }: { params: Promise<{ cursoId: string }> }) {
   const { cursoId } = await params;
 
-  const [course, categories, departments, employees, assignmentCount] = await Promise.all([
+  const [course, categories, departments, employees, assignments] = await Promise.all([
     getCourseForEditing(cursoId),
     listCategories(),
     prisma.department.findMany({ orderBy: { name: "asc" } }),
     prisma.user.findMany({ where: { role: { code: "EMPLOYEE" }, status: "ACTIVE" }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    prisma.courseAssignment.count({ where: { courseId: cursoId } }),
+    listCourseAssignments(cursoId),
   ]);
 
   if (!course) notFound();
@@ -39,7 +41,7 @@ export default async function EditCoursePage({ params }: { params: Promise<{ cur
       </div>
       <p className="mt-1 text-muted">
         {course.modules.length} módulo(s) · {course.modules.reduce((sum, m) => sum + m.lessons.length, 0)} aula(s) ·{" "}
-        {assignmentCount} colaborador(es) atribuído(s)
+        {assignments.length} colaborador(es) atribuído(s)
       </p>
 
       <div className="mt-6">
@@ -66,21 +68,32 @@ export default async function EditCoursePage({ params }: { params: Promise<{ cur
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Atribuir a colaboradores</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AssignCourseForm fixedCourseId={cursoId} users={employees} departments={departments} />
-            <Link
-              href={`/admin/progresso?courseId=${cursoId}`}
-              className="mt-4 flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-            >
-              Ver progresso deste curso
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Atribuir a colaboradores</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AssignCourseForm fixedCourseId={cursoId} users={employees} departments={departments} />
+              <Link
+                href={`/admin/progresso?courseId=${cursoId}`}
+                className="mt-4 flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                Ver progresso deste curso
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Colaboradores atribuídos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CourseAssigneesList assignments={assignments} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

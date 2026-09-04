@@ -55,6 +55,15 @@ export async function assignCourse(input: AssignCourseInput, actorId: string) {
   return { assignedCount: targetUserIds.length };
 }
 
+/** Colaboradores atribuídos a um curso, usado na tela de edição do curso. */
+export async function listCourseAssignments(courseId: string) {
+  return prisma.courseAssignment.findMany({
+    where: { courseId },
+    include: { user: { include: { department: true } } },
+    orderBy: { assignedAt: "desc" },
+  });
+}
+
 export async function removeAssignment(assignmentId: string, actorId: string) {
   const assignment = await prisma.courseAssignment.delete({ where: { id: assignmentId } });
   await prisma.courseProgress

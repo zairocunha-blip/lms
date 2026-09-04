@@ -171,3 +171,15 @@ export async function toggleCategoryAction(id: string, isActive: boolean) {
   await courseService.updateCategory(id, { isActive });
   revalidatePath("/admin/categorias");
 }
+
+export async function deleteCategoryAction(id: string): Promise<{ error?: string }> {
+  await requireAdmin();
+  try {
+    await courseService.deleteCategory(id);
+  } catch {
+    return { error: "Não foi possível excluir a categoria." };
+  }
+  revalidatePath("/admin/categorias");
+  revalidatePath("/admin/cursos");
+  return {};
+}

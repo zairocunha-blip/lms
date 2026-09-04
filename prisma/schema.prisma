@@ -107,8 +107,10 @@ model Course {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
-  createdById String
-  createdBy   User   @relation("CourseCreatedBy", fields: [createdById], references: [id])
+  // Opcional: excluir o usuário que criou o curso não deve travar a exclusão
+  // dele — o curso permanece, apenas perde a referência de quem o criou.
+  createdById String?
+  createdBy   User?   @relation("CourseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -194,8 +196,10 @@ model CourseAssignment {
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  assignedById String
-  assignedBy   User   @relation("AssignedBy", fields: [assignedById], references: [id])
+  // Opcional pelo mesmo motivo: excluir o admin que atribuiu o curso não pode
+  // travar a exclusão dele, nem apagar a atribuição em si.
+  assignedById String?
+  assignedBy   User?   @relation("AssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
 
   assignedAt  DateTime  @default(now())
   completedAt DateTime?
@@ -282,8 +286,10 @@ model AuditLog {
   entityId   String?
   metadata   Json?
 
-  actorId String
-  actor   User   @relation(fields: [actorId], references: [id])
+  // Opcional: o histórico de auditoria sobrevive à exclusão do usuário que
+  // praticou a ação — só perde a referência de quem foi.
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
 

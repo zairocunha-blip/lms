@@ -84,6 +84,36 @@ export async function resetPasswordToDefault(userId: string, actorId: string) {
   return DEFAULT_PASSWORD;
 }
 
+/**
+ * Exclui definitivamente um usuário. Diferente de desativar (`setUserStatus`),
+ * não há volta — cursos que ele criou e atribuições que ele fez permanecem,
+ * apenas perdem a referência de quem foi (ver migration `permitir_exclusao_de_usuarios`).
+ * O que é dele mesmo (atribuições recebidas, progresso, notificações) é removido em cascata.
+ */
+export async function deleteUser(userId: string, actorId: string) {
+  if (userId === actorId) {
+    throw new Error("Você não pode excluir a própria conta.");
+  }
+
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, include: { role: true } });
+
+  if (user.role.code === "ADMIN") {
+    const otherAdmins = await prisma.user.count({ where: { role: { code: "ADMIN" }, id: { not: userId } } });
+    if (otherAdmins === 0) {
+      throw new Error("Não é possível excluir o único administrador da plataforma.");
+    }
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
+  await logAction({
+    actorId,
+    action: "USER_DELETED",
+    entityType: "User",
+    entityId: userId,
+    metadata: { name: user.name, email: user.email },
+  });
+}
+
 interface ListUsersParams {
   search?: string;
   departmentId?: string;

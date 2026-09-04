@@ -1,5 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Circle, PlayCircle } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 interface LessonNavModule {
@@ -7,6 +10,8 @@ interface LessonNavModule {
   title: string;
   lessons: { id: string; title: string }[];
 }
+
+const STORAGE_KEY = "lms:lesson-nav-collapsed";
 
 export function LessonNavigation({
   courseId,
@@ -21,16 +26,67 @@ export function LessonNavigation({
   currentLessonId: string;
   completedLessonIds: Set<string>;
 }) {
+  // Sempre renderiza expandida no primeiro paint (igual ao servidor) e só lê
+  // a preferência salva depois de montar — evita divergência de hidratação.
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
+    } catch {
+      // localStorage indisponível (aba privada etc.) — mantém expandida.
+    }
+  }, []);
+
+  function toggle() {
+    setCollapsed((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        // Sem persistência disponível — a escolha só vale para esta sessão de navegação.
+      }
+      return next;
+    });
+  }
+
+  if (collapsed) {
+    return (
+      <div className="hidden shrink-0 lg:sticky lg:top-8 lg:block">
+        <button
+          type="button"
+          onClick={toggle}
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-canvas text-muted hover:bg-surface-alt hover:text-ink"
+          aria-label="Mostrar módulos do curso"
+          title="Mostrar módulos do curso"
+        >
+          <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <nav
       aria-label="Conteúdo do curso"
       className="w-full shrink-0 rounded-md border border-border bg-canvas lg:sticky lg:top-8 lg:w-72"
     >
-      <div className="border-b border-border px-4 py-3">
-        <Link href={`/cursos/${courseId}`} className="text-xs font-medium text-primary hover:underline">
-          Voltar à visão geral
-        </Link>
-        <p className="mt-1 truncate font-display text-sm font-semibold text-ink">{courseTitle}</p>
+      <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
+        <div className="min-w-0">
+          <Link href={`/cursos/${courseId}`} className="text-xs font-medium text-primary hover:underline">
+            Voltar à visão geral
+          </Link>
+          <p className="mt-1 truncate font-display text-sm font-semibold text-ink">{courseTitle}</p>
+        </div>
+        <button
+          type="button"
+          onClick={toggle}
+          className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-alt hover:text-ink lg:flex"
+          aria-label="Minimizar módulos do curso"
+          title="Minimizar módulos do curso"
+        >
+          <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
 
       <div className="max-h-[70vh] overflow-y-auto py-2">

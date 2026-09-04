@@ -245,6 +245,15 @@ export async function updateCategory(id: string, data: { name?: string; isActive
   return prisma.category.update({ where: { id }, data });
 }
 
+/**
+ * Exclui a categoria. `Course.categoryId` é opcional com `ON DELETE SET NULL`
+ * no banco, então cursos vinculados não são bloqueados nem apagados — apenas
+ * ficam sem categoria.
+ */
+export async function deleteCategory(id: string) {
+  await prisma.category.delete({ where: { id } });
+}
+
 // --- Consulta para o colaborador --------------------------------------------
 
 /** Cursos atribuídos a um colaborador, com progresso e contagem de aulas. */

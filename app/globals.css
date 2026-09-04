@@ -21,11 +21,23 @@
   }
 
   html {
+    height: 100%;
     -webkit-text-size-adjust: 100%;
   }
 
+  /*
+   * As telas autenticadas (admin/colaborador) usam um shell de altura fixa
+   * (h-screen) com UMA área interna rolável (<main overflow-y-auto>) — o
+   * documento em si não deveria rolar. Sem isto, o gesto de scroll "vaza"
+   * para o <body> ao chegar no fim do conteúdo interno (scroll chaining),
+   * revelando um vão em branco abaixo do shell. `overscroll-behavior`
+   * contém esse vazamento sem impedir páginas curtas (como o login) de
+   * rolar normalmente caso um dia precisem.
+   */
   body {
     @apply bg-surface text-ink font-sans antialiased;
+    height: 100%;
+    overscroll-behavior-y: none;
   }
 
   h1,

@@ -62,45 +62,48 @@ export default async function LessonPage({
         />
 
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl font-semibold text-ink">{lesson.title}</h1>
+          <div className="mx-auto max-w-[720px]">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-subtle">{course.title}</p>
+            <h1 className="mt-1 font-display text-2xl font-semibold text-ink">{lesson.title}</h1>
 
-          <div className="mt-6">
-            {lesson.content?.type === "SLIDES" ? (
-              <SlidesViewer fileUrl={lesson.content.fileUrl} fileName={lesson.content.fileName} />
-            ) : lesson.content?.body ? (
-              <MarkdownRenderer content={lesson.content.body} />
-            ) : (
-              <p className="text-sm text-muted">O conteúdo desta aula ainda não foi adicionado.</p>
-            )}
-          </div>
+            <div className="mt-6">
+              {lesson.content?.type === "SLIDES" ? (
+                <SlidesViewer fileUrl={lesson.content.fileUrl} fileName={lesson.content.fileName} />
+              ) : lesson.content?.body ? (
+                <MarkdownRenderer content={lesson.content.body} />
+              ) : (
+                <p className="text-sm text-muted">O conteúdo desta aula ainda não foi adicionado.</p>
+              )}
+            </div>
 
-          <div className="mt-10 flex items-center justify-between border-t border-border pt-5">
-            {previousLesson ? (
-              <Button variant="secondary" asChild>
-                <Link href={`/cursos/${cursoId}/aula/${previousLesson.id}`}>
-                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                  Aula anterior
-                </Link>
-              </Button>
-            ) : (
-              <span />
-            )}
-
-            {isLessonCompleted ? (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-success">
-                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                Aula concluída
-              </span>
-            ) : (
-              <form action={completeLessonAction}>
-                <input type="hidden" name="lessonId" value={aulaId} />
-                <input type="hidden" name="courseId" value={cursoId} />
-                <Button type="submit">
-                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                  Concluir aula
+            <div className="mt-10 flex items-center justify-between border-t border-border pt-5">
+              {previousLesson ? (
+                <Button variant="secondary" asChild>
+                  <Link href={`/cursos/${cursoId}/aula/${previousLesson.id}`}>
+                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                    Aula anterior
+                  </Link>
                 </Button>
-              </form>
-            )}
+              ) : (
+                <span />
+              )}
+
+              {isLessonCompleted ? (
+                <span className="flex items-center gap-1.5 text-sm font-medium text-success">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  Aula concluída
+                </span>
+              ) : (
+                <form action={completeLessonAction}>
+                  <input type="hidden" name="lessonId" value={aulaId} />
+                  <input type="hidden" name="courseId" value={cursoId} />
+                  <Button type="submit">
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    Concluir aula
+                  </Button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       </div>
