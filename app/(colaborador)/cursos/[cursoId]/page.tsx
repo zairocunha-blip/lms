@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CheckCircle2, Circle, PlayCircle, BookOpen } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, BookOpen, ClipboardCheck, Lock, Clock } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { getCourseForLearner } from "@/lib/services/course";
 import { getCourseProgressSummary } from "@/lib/services/progress";
+import { getQuizForLearner } from "@/lib/services/quiz";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,8 +35,12 @@ export default async function CourseOverviewPage({ params }: { params: Promise<{
   if (!course) notFound();
 
   const { progress, completedLessonIds } = await getCourseProgressSummary(userId, cursoId);
+  const quizState = await getQuizForLearner(cursoId, userId);
   const allLessons = course.modules.flatMap((m) => m.lessons);
-  const nextLesson = allLessons.find((l) => !completedLessonIds.has(l.id)) ?? allLessons[0];
+  const nextIncompleteLesson = allLessons.find((l) => !completedLessonIds.has(l.id));
+  const nextLesson = nextIncompleteLesson ?? allLessons[0];
+  // Aulas concluídas + prova liberada e não aprovada → o CTA leva à prova.
+  const ctaToQuiz = !nextIncompleteLesson && !!quizState && quizState.canAttempt;
 
   return (
     <div className="mx-auto max-w-content px-4 py-6 md:px-8 md:py-8">
@@ -59,13 +64,22 @@ export default async function CourseOverviewPage({ params }: { params: Promise<{
             <span className="shrink-0 text-sm font-medium text-muted">{progress?.percentage ?? 0}%</span>
           </div>
 
-          {nextLesson && (
+          {ctaToQuiz ? (
             <Button asChild className="mt-5">
-              <Link href={`/cursos/${cursoId}/aula/${nextLesson.id}`}>
-                <PlayCircle className="h-4 w-4" aria-hidden="true" />
-                {progress && progress.percentage > 0 ? "Continuar curso" : "Começar curso"}
+              <Link href={`/cursos/${cursoId}/prova`}>
+                <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+                Fazer a prova final
               </Link>
             </Button>
+          ) : (
+            nextLesson && (
+              <Button asChild className="mt-5">
+                <Link href={`/cursos/${cursoId}/aula/${nextLesson.id}`}>
+                  <PlayCircle className="h-4 w-4" aria-hidden="true" />
+                  {progress && progress.percentage > 0 ? "Continuar curso" : "Começar curso"}
+                </Link>
+              </Button>
+            )
           )}
         </div>
       </div>
@@ -101,6 +115,90 @@ export default async function CourseOverviewPage({ params }: { params: Promise<{
           </div>
         ))}
       </div>
+
+      {quizState && (
+        <div className="mt-6 rounded-md border border-border bg-canvas">
+          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+            <ClipboardCheck className="h-4 w-4 text-primary" aria-hidden="true" />
+            <p className="font-display text-sm font-semibold text-ink">{quizState.quiz.title}</p>
+          </div>
+          <div className="px-4 py-4">
+            <QuizStatus courseId={cursoId} quizState={quizState} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuizStatus({
+  courseId,
+  quizState,
+}: {
+  courseId: string;
+  quizState: NonNullable<Awaited<ReturnType<typeof getQuizForLearner>>>;
+}) {
+  const { blockingReason, attemptsLeft, attemptsUsed, latestAttempt, quiz } = quizState;
+
+  if (quizState.isApproved) {
+    return (
+      <p className="flex items-center gap-2 text-sm font-medium text-success">
+        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+        Prova aprovada
+        {latestAttempt?.finalScorePct !== null && latestAttempt?.finalScorePct !== undefined
+          ? ` — nota ${latestAttempt.finalScorePct}%`
+          : ""}
+        . Curso concluído.
+      </p>
+    );
+  }
+
+  if (blockingReason === "pending") {
+    return (
+      <p className="flex items-center gap-2 text-sm font-medium text-warning">
+        <Clock className="h-4 w-4" aria-hidden="true" />
+        Prova enviada — aguardando correção de um administrador.
+      </p>
+    );
+  }
+
+  if (blockingReason === "lessons") {
+    return (
+      <p className="flex items-center gap-2 text-sm text-muted">
+        <Lock className="h-4 w-4" aria-hidden="true" />
+        Conclua todas as aulas para liberar a prova.
+      </p>
+    );
+  }
+
+  if (blockingReason === "no_attempts") {
+    return (
+      <div className="space-y-1 text-sm">
+        <p className="flex items-center gap-2 font-medium text-danger">
+          <Circle className="h-4 w-4" aria-hidden="true" />
+          Prova não aprovada e sem tentativas restantes. Procure o administrador.
+        </p>
+        {latestAttempt?.reviewNote && <p className="text-muted">Comentário: {latestAttempt.reviewNote}</p>}
+      </div>
+    );
+  }
+
+  // canAttempt
+  return (
+    <div className="space-y-2">
+      {latestAttempt?.status === "REJECTED" && latestAttempt.reviewNote && (
+        <p className="text-sm text-muted">Última correção: {latestAttempt.reviewNote}</p>
+      )}
+      <p className="text-sm text-muted">
+        {quiz.questions.length} questão(ões) · {attemptsLeft} de {attemptsUsed + attemptsLeft} tentativa(s)
+        restante(s).
+      </p>
+      <Button asChild>
+        <Link href={`/cursos/${courseId}/prova`}>
+          <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+          {attemptsUsed > 0 ? "Refazer a prova" : "Fazer a prova"}
+        </Link>
+      </Button>
     </div>
   );
 }

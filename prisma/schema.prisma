@@ -71,6 +71,8 @@ model User {
   courseProgress   CourseProgress[]
   notifications    Notification[]
   auditLogs        AuditLog[]
+  quizAttempts     QuizAttempt[]
+  quizReviews      QuizAttempt[]      @relation("QuizReviewedBy")
 
   @@index([status])
   @@index([departmentId])
@@ -118,6 +120,7 @@ model Course {
   modules     CourseModule[]
   assignments CourseAssignment[]
   progress    CourseProgress[]
+  quiz        Quiz?
 
   @@index([status])
   @@index([categoryId])
@@ -255,6 +258,126 @@ model CourseProgress {
 }
 
 // ---------------------------------------------------------------------------
+// Provas (avaliação obrigatória para concluir o curso)
+// ---------------------------------------------------------------------------
+
+model Quiz {
+  id           String  @id @default(cuid())
+  title        String  @default("Prova final")
+  description  String?
+  // Percentual mínimo de acerto para o admin aprovar (referência na correção).
+  passingScore Int     @default(70)
+  // Quantas vezes o colaborador pode enviar a prova antes de precisar de
+  // liberação manual do admin.
+  maxAttempts  Int     @default(3)
+  // Quando false, a prova existe mas não bloqueia a conclusão do curso.
+  isActive     Boolean @default(true)
+
+  courseId String @unique
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("quizzes")
+}
+
+enum QuizQuestionType {
+  OBJECTIVE // múltipla escolha, corrigida automaticamente
+  TEXT      // resposta aberta, corrigida pelo admin
+}
+
+model QuizQuestion {
+  id     String           @id @default(cuid())
+  type   QuizQuestionType @default(OBJECTIVE)
+  prompt String
+  points Int              @default(1)
+  order  Int              @default(0)
+
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  options QuizOption[]
+  answers QuizAnswer[]
+
+  @@index([quizId])
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id        String  @id @default(cuid())
+  text      String
+  isCorrect Boolean @default(false)
+  order     Int     @default(0)
+
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  answers QuizAnswer[]
+
+  @@index([questionId])
+  @@map("quiz_options")
+}
+
+enum QuizAttemptStatus {
+  PENDING_REVIEW // enviada, aguardando correção do admin
+  APPROVED       // admin aprovou — libera a conclusão do curso
+  REJECTED       // admin reprovou — colaborador refaz se ainda houver tentativas
+}
+
+model QuizAttempt {
+  id          String            @id @default(cuid())
+  attemptNo   Int               @default(1)
+  status      QuizAttemptStatus @default(PENDING_REVIEW)
+  // Acerto automático nas questões objetivas no momento do envio (informativo).
+  autoScorePct Int?
+  // Nota final atribuída pelo admin ao aprovar/reprovar.
+  finalScorePct Int?
+  reviewNote  String?
+  reviewedById String?
+  reviewedBy   User?    @relation("QuizReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+  submittedAt  DateTime @default(now())
+
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  answers QuizAnswer[]
+
+  @@unique([quizId, userId, attemptNo])
+  @@index([quizId, status])
+  @@index([userId])
+  @@map("quiz_attempts")
+}
+
+model QuizAnswer {
+  id           String   @id @default(cuid())
+  textResponse String?
+  // Objetivas: definido no envio. Texto: null até o admin corrigir.
+  isCorrect    Boolean?
+  // Pontos concedidos pelo admin nas questões de texto (nota parcial).
+  awardedPoints Int?
+
+  attemptId String
+  attempt   QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  selectedOptionId String?
+  selectedOption   QuizOption? @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@index([attemptId])
+  @@map("quiz_answers")
+}
+
+// ---------------------------------------------------------------------------
 // Notificações e auditoria
 // ---------------------------------------------------------------------------
 
@@ -262,6 +385,9 @@ enum NotificationType {
   COURSE_ASSIGNED
   COURSE_COMPLETED
   CONTENT_ADDED
+  QUIZ_SUBMITTED
+  QUIZ_APPROVED
+  QUIZ_REJECTED
 }
 
 model Notification {

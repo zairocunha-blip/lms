@@ -3,12 +3,35 @@ import { prisma } from "@/lib/db/prisma";
 import { notify } from "@/lib/services/notification";
 
 /**
+ * Diz se um curso exige prova e se o colaborador já foi aprovado nela. É a
+ * regra que trava a conclusão do curso enquanto a prova não é aprovada pelo
+ * admin. Fica aqui (e não em `quiz.ts`) para manter o import unidirecional:
+ * `quiz.ts` importa deste arquivo, nunca o contrário.
+ */
+export async function getCourseQuizGate(userId: string, courseId: string) {
+  const quiz = await prisma.quiz.findUnique({
+    where: { courseId },
+    select: { id: true, isActive: true, _count: { select: { questions: true } } },
+  });
+
+  const required = !!quiz && quiz.isActive && quiz._count.questions > 0;
+  if (!required) return { required: false, approved: true };
+
+  const approvedAttempt = await prisma.quizAttempt.findFirst({
+    where: { quizId: quiz!.id, userId, status: "APPROVED" },
+    select: { id: true },
+  });
+
+  return { required: true, approved: !!approvedAttempt };
+}
+
+/**
  * Recalcula o CourseProgress de um usuário a partir das LessonProgress
  * existentes. É a única função que deve escrever em CourseProgress —
  * mantém a Regra 6 (o percentual é sempre derivado, nunca editado
  * manualmente) em um único lugar.
  */
-async function recalculateCourseProgress(userId: string, courseId: string) {
+export async function recalculateCourseProgress(userId: string, courseId: string) {
   const totalLessons = await prisma.lesson.count({
     where: { module: { courseId } },
   });
@@ -22,7 +45,12 @@ async function recalculateCourseProgress(userId: string, courseId: string) {
   });
 
   const percentage = totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
-  const isCompleted = totalLessons > 0 && completedLessons === totalLessons;
+  const lessonsDone = totalLessons > 0 && completedLessons === totalLessons;
+
+  // Regra da prova: mesmo com todas as aulas concluídas, o curso só fica
+  // COMPLETED depois que o admin aprova a tentativa de prova (quando exigida).
+  const quizGate = await getCourseQuizGate(userId, courseId);
+  const isCompleted = lessonsDone && (!quizGate.required || quizGate.approved);
 
   const existing = await prisma.courseProgress.findUnique({
     where: { userId_courseId: { userId, courseId } },

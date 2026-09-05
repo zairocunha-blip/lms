@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
-import { markLessonCompleted } from "@/lib/services/progress";
+import { markLessonCompleted, getCourseQuizGate } from "@/lib/services/progress";
 
 /**
  * Marca a aula atual como concluída (Regra 5) e navega para a próxima aula
@@ -36,6 +36,13 @@ export async function completeLessonAction(formData: FormData) {
 
   if (nextLessonId) {
     redirect(`/cursos/${courseId}/aula/${nextLessonId}`);
+  }
+
+  // Terminou as aulas: se o curso exige prova e ela ainda não foi aprovada,
+  // leva direto para a prova em vez da visão geral.
+  const quizGate = await getCourseQuizGate(user.id, courseId);
+  if (quizGate.required && !quizGate.approved) {
+    redirect(`/cursos/${courseId}/prova`);
   }
   redirect(`/cursos/${courseId}`);
 }

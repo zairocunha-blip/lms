@@ -269,6 +269,57 @@ async function main() {
     }
   }
 
+  // --- Prova de exemplo (curso de Segurança da Informação) ----------------------
+  const existingQuiz = await prisma.quiz.findUnique({ where: { courseId: securityCourse.id } });
+  if (!existingQuiz) {
+    await prisma.quiz.create({
+      data: {
+        courseId: securityCourse.id,
+        title: "Prova final — Segurança da Informação",
+        description: "Responda todas as questões. Um administrador corrige e libera a conclusão do curso.",
+        passingScore: 60,
+        maxAttempts: 3,
+        questions: {
+          create: [
+            {
+              type: "OBJECTIVE",
+              prompt: "Qual das senhas abaixo é a mais segura?",
+              points: 1,
+              order: 0,
+              options: {
+                create: [
+                  { text: "empresa123", isCorrect: false, order: 0 },
+                  { text: "Tr#94-Nuvem!Corvo", isCorrect: true, order: 1 },
+                  { text: "123456", isCorrect: false, order: 2 },
+                  { text: "seunome2024", isCorrect: false, order: 3 },
+                ],
+              },
+            },
+            {
+              type: "OBJECTIVE",
+              prompt: "Ao receber um e-mail suspeito pedindo sua senha com urgência, você deve:",
+              points: 1,
+              order: 1,
+              options: {
+                create: [
+                  { text: "Responder com a senha para não perder o acesso", isCorrect: false, order: 0 },
+                  { text: "Clicar no link para verificar se é verdadeiro", isCorrect: false, order: 1 },
+                  { text: "Não clicar e encaminhar para o time de Tecnologia", isCorrect: true, order: 2 },
+                ],
+              },
+            },
+            {
+              type: "TEXT",
+              prompt: "Descreva com suas palavras como você trataria um documento classificado como confidencial no dia a dia.",
+              points: 2,
+              order: 2,
+            },
+          ],
+        },
+      },
+    });
+  }
+
   console.log("Seed concluído.");
   console.log("Login administrador: admin@empresa.local / Admin@123");
   console.log("Login colaboradores (exemplo): ana.souza@empresa.local / Colaborador@123");

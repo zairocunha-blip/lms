@@ -3,11 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import { getCourseForEditing, listCategories } from "@/lib/services/course";
+import { getQuizForEditing, countPendingAttempts } from "@/lib/services/quiz";
 import { listCourseAssignments } from "@/lib/services/assignment";
 import { prisma } from "@/lib/db/prisma";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CourseInfoForm } from "@/components/admin/course-info-form";
 import { CourseBuilder } from "@/components/admin/course-builder";
+import { QuizBuilder } from "@/components/admin/quiz-builder";
 import { AssignCourseForm } from "@/components/admin/assign-course-form";
 import { CourseAssigneesList } from "@/components/admin/course-assignees-list";
 import { CourseStatusBadge } from "@/components/ui/status-badge";
@@ -18,12 +20,14 @@ export const dynamic = "force-dynamic";
 export default async function EditCoursePage({ params }: { params: Promise<{ cursoId: string }> }) {
   const { cursoId } = await params;
 
-  const [course, categories, departments, employees, assignments] = await Promise.all([
+  const [course, categories, departments, employees, assignments, quiz, pendingAttempts] = await Promise.all([
     getCourseForEditing(cursoId),
     listCategories(),
     prisma.department.findMany({ orderBy: { name: "asc" } }),
     prisma.user.findMany({ where: { role: { code: "EMPLOYEE" }, status: "ACTIVE" }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     listCourseAssignments(cursoId),
+    getQuizForEditing(cursoId),
+    countPendingAttempts(cursoId),
   ]);
 
   if (!course) notFound();
@@ -47,6 +51,43 @@ export default async function EditCoursePage({ params }: { params: Promise<{ cur
       <div className="mt-6">
         <CourseBuilder courseId={cursoId} modules={course.modules} />
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Prova final</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <QuizBuilder
+            courseId={cursoId}
+            quiz={
+              quiz
+                ? {
+                    id: quiz.id,
+                    title: quiz.title,
+                    description: quiz.description,
+                    passingScore: quiz.passingScore,
+                    maxAttempts: quiz.maxAttempts,
+                    isActive: quiz.isActive,
+                    questions: quiz.questions.map((q) => ({
+                      id: q.id,
+                      type: q.type,
+                      prompt: q.prompt,
+                      points: q.points,
+                      order: q.order,
+                      options: q.options.map((o) => ({
+                        id: o.id,
+                        text: o.text,
+                        isCorrect: o.isCorrect,
+                        order: o.order,
+                      })),
+                    })),
+                  }
+                : null
+            }
+            pendingCount={pendingAttempts}
+          />
+        </CardContent>
+      </Card>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>

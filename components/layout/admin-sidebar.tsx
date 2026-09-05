@@ -9,6 +9,7 @@ import {
   BookOpen,
   Tag,
   LineChart,
+  ClipboardCheck,
   LogOut,
   GraduationCap,
   UserCog,
@@ -23,6 +24,7 @@ const links: { href: string; icon: LucideIcon; label: string; exact?: boolean }[
   { href: "/admin/departamentos", icon: Building2, label: "Departamentos" },
   { href: "/admin/cursos", icon: BookOpen, label: "Cursos" },
   { href: "/admin/categorias", icon: Tag, label: "Categorias" },
+  { href: "/admin/provas", icon: ClipboardCheck, label: "Provas" },
   { href: "/admin/progresso", icon: LineChart, label: "Progresso" },
 ];
 

@@ -52,11 +52,11 @@ export function LessonNavigation({
 
   if (collapsed) {
     return (
-      <div className="hidden shrink-0 lg:sticky lg:top-8 lg:block">
+      <div className="hidden shrink-0 border-r border-border lg:flex lg:h-full lg:items-start lg:justify-center lg:pt-4">
         <button
           type="button"
           onClick={toggle}
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-canvas text-muted hover:bg-surface-alt hover:text-ink"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-alt hover:text-ink"
           aria-label="Mostrar módulos do curso"
           title="Mostrar módulos do curso"
         >
@@ -67,11 +67,14 @@ export function LessonNavigation({
   }
 
   return (
+    // Abaixo de `lg`, continua um cartão normal no fluxo da página. A partir de
+    // `lg`, vira uma coluna fixa à esquerda com a altura inteira da tela — os
+    // módulos ficam "presos" ali, com rolagem própria, como no desenho.
     <nav
       aria-label="Conteúdo do curso"
-      className="w-full shrink-0 rounded-md border border-border bg-canvas lg:sticky lg:top-8 lg:w-72"
+      className="flex w-full shrink-0 flex-col rounded-md border border-border bg-canvas lg:h-full lg:w-80 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:border-r"
     >
-      <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
+      <div className="flex shrink-0 items-start justify-between gap-2 border-b border-border px-4 py-3">
         <div className="min-w-0">
           <Link href={`/cursos/${courseId}`} className="text-xs font-medium text-primary hover:underline">
             Voltar à visão geral
@@ -89,7 +92,7 @@ export function LessonNavigation({
         </button>
       </div>
 
-      <div className="max-h-[70vh] overflow-y-auto py-2">
+      <div className="max-h-[70vh] overflow-y-auto py-2 lg:max-h-none lg:flex-1">
         {modules.map((module, moduleIndex) => (
           <div key={module.id} className="px-2 py-1.5">
             <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-subtle">

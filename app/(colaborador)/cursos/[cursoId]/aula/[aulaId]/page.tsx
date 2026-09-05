@@ -46,25 +46,26 @@ export default async function LessonPage({
   const isLessonCompleted = completedLessonIds.has(aulaId);
 
   return (
-    // Sem max-w-content de propósito: ao contrário das outras telas do
-    // colaborador, a aula usa a largura inteira disponível — módulos fixos à
-    // esquerda, conteúdo ocupando todo o restante, sem sobra em branco.
-    <div className="px-4 py-6 md:px-8 md:py-8">
+    // Sem max-w-content e sem padding lateral de propósito: a partir de `lg`
+    // isto vira um shell de duas colunas ocupando a tela inteira (mesma altura
+    // do `<main>`) — módulos presos à esquerda com rolagem própria, conteúdo
+    // maximizado à direita, cada um rolando de forma independente.
+    <div className="flex flex-col px-4 py-4 lg:h-full lg:flex-row lg:overflow-hidden lg:px-0 lg:py-0">
       <Link href={`/cursos/${cursoId}`} className="mb-4 flex items-center gap-1 text-sm font-medium text-muted hover:text-ink lg:hidden">
         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         Voltar ao curso
       </Link>
 
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <LessonNavigation
-          courseId={cursoId}
-          courseTitle={course.title}
-          modules={course.modules}
-          currentLessonId={aulaId}
-          completedLessonIds={completedLessonIds}
-        />
+      <LessonNavigation
+        courseId={cursoId}
+        courseTitle={course.title}
+        modules={course.modules}
+        currentLessonId={aulaId}
+        completedLessonIds={completedLessonIds}
+      />
 
-        <div className="min-w-0 flex-1">
+      <div className="mt-6 min-w-0 flex-1 lg:mt-0 lg:h-full lg:overflow-y-auto">
+        <div className="lg:px-10 lg:py-8">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-subtle">{course.title}</p>
           <h1 className="mt-1 font-display text-2xl font-semibold text-ink">{lesson.title}</h1>
 
@@ -78,7 +79,7 @@ export default async function LessonPage({
             )}
           </div>
 
-          <div className="mt-10 flex items-center justify-between border-t border-border pt-5">
+          <div className="mt-10 flex items-center justify-between border-t border-border pt-5 pb-6 lg:pb-0">
             {previousLesson ? (
               <Button variant="secondary" asChild>
                 <Link href={`/cursos/${cursoId}/aula/${previousLesson.id}`}>
